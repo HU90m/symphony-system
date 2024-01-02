@@ -30,7 +30,10 @@
         };
         nativeBuildInputs = [pkgs.mdbook pkgs.tree];
         phases = [ "unpackPhase" "buildPhase" "installPhase" ];
-        buildPhase = "mdbook build";
+        buildPhase = ''
+          pwd
+          mdbook build
+        '';
         installPhase = ''
           mkdir $out
           mv book/* $out
