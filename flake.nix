@@ -17,23 +17,25 @@
       docs_build = pkgs.stdenv.mkDerivation {
         pname = "symphony-system-documentation";
         version = version;
-        src = with pkgs.lib.strings; builtins.path {
-          path = ./.;
-          filter = path: type: (
-            type == "directory"
-            || hasInfix "util/mdbook" path
-            || hasSuffix ".md" path
-            || hasSuffix ".svg" path
-            || hasSuffix ".png" path
-            || hasSuffix "book.toml" path
-          );
-        };
-        nativeBuildInputs = [pkgs.mdbook pkgs.tree];
-        phases = [ "unpackPhase" "buildPhase" "installPhase" ];
-        buildPhase = ''
-          pwd
-          mdbook build
-        '';
+        src = with pkgs.lib.strings;
+          # only include wanted files
+          builtins.path {
+            path = ./.;
+            filter = path: type: (
+              type
+              == "directory"
+              || hasInfix "util/mdbook" path
+              || builtins.any (suffix: hasSuffix suffix path) [
+                ".md"
+                ".svg"
+                ".png"
+                "book.toml"
+              ]
+            );
+          };
+        nativeBuildInputs = [pkgs.mdbook pkgs.tree pkgs.python311];
+        phases = ["unpackPhase" "buildPhase" "installPhase"];
+        buildPhase = "mdbook build";
         installPhase = ''
           mkdir $out
           mv book/* $out

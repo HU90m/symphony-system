@@ -16,4 +16,4 @@ additional-css = [
 ]
 
 [preprocessor.wavejson]
-command = "./util/mdbook_wavejson.py"
+command = "python ./util/mdbook_wavejson.py"
