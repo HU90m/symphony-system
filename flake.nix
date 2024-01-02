@@ -10,8 +10,31 @@
     flake-utils,
   }: let
     system_outputs = system: let
+      version = "0.1.0";
       pkgs = import nixpkgs {
         inherit system;
+      };
+      docs_build = pkgs.stdenv.mkDerivation {
+        pname = "symphony-system-documentation";
+        version = version;
+        src = with pkgs.lib.strings; builtins.path {
+          path = ./.;
+          filter = path: type: (
+            type == "directory"
+            || hasInfix "util/mdbook" path
+            || hasSuffix ".md" path
+            || hasSuffix ".svg" path
+            || hasSuffix ".png" path
+            || hasSuffix "book.toml" path
+          );
+        };
+        nativeBuildInputs = [pkgs.mdbook pkgs.tree];
+        phases = [ "unpackPhase" "buildPhase" "installPhase" ];
+        buildPhase = "mdbook build";
+        installPhase = ''
+          mkdir $out
+          mv book/* $out
+        '';
       };
       python_check_app = pkgs.writeShellApplication {
         name = "python-check";
@@ -36,6 +59,7 @@
       };
     in {
       formatter = pkgs.alejandra;
+      packages.docs = docs_build;
       apps.python_check = {
         type = "app";
         program = "${python_check_app}/bin/python-check";
