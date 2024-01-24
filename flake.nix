@@ -1,46 +1,22 @@
 {
   description = "Symphony System";
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixos-23.11";
+    lowrisc-nix.url = "/home/hugom/repo/lr/lowrisc-nix";
+    nixpkgs.follows = "lowrisc-nix/nixpkgs";
     flake-utils.url = "github:numtide/flake-utils";
   };
   outputs = {
     self,
     nixpkgs,
     flake-utils,
+    lowrisc-nix,
   }: let
     system_outputs = system: let
       version = "0.1.0";
-      pkgs = import nixpkgs {
-        inherit system;
-      };
-      docs_build = pkgs.stdenv.mkDerivation {
-        pname = "symphony-system-documentation";
-        version = version;
-        src = with pkgs.lib.strings;
-          # only include wanted files
-          builtins.path {
-            path = ./.;
-            filter = path: type: (
-              type
-              == "directory"
-              || hasInfix "util/mdbook" path
-              || builtins.any (suffix: hasSuffix suffix path) [
-                ".md"
-                ".svg"
-                ".png"
-                "book.toml"
-              ]
-            );
-          };
-        nativeBuildInputs = [pkgs.mdbook pkgs.tree pkgs.python311];
-        phases = ["unpackPhase" "buildPhase" "installPhase"];
-        buildPhase = "mdbook build";
-        installPhase = ''
-          mkdir $out
-          mv book/* $out
-        '';
-      };
+      pkgs = import nixpkgs {inherit system;};
+      fs = pkgs.lib.fileset;
+      lib_doc = lowrisc-nix.lib.doc {inherit pkgs;};
+
       python_check_app = pkgs.writeShellApplication {
         name = "python-check";
         runtimeInputs = with pkgs; [
@@ -61,6 +37,20 @@
           ruff format .
           ruff check --fix .
         '';
+      };
+
+      docs_build = lib_doc.buildMdbookSite {
+        inherit version;
+        pname = "symphony-system-documentation";
+        nativeBuildInputs = [pkgs.python311];
+        src = fs.toSource {
+          root = ./.;
+          fileset = fs.unions [
+            (lib_doc.standardMdbookFileset ./.)
+            ./util/mdbook
+            ./util/mdbook_wavejson.py
+          ];
+        };
       };
     in {
       formatter = pkgs.alejandra;
